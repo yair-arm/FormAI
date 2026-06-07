@@ -42,7 +42,7 @@ export default function Dashboard() {
         body: JSON.stringify({ prompt: aiPrompt })
       })
       const form = await res.json()
-      const slug = form.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      const slug = (form.title || 'formulario').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
       const { data } = await supabase.from('forms').insert({
         user_id: user.id,
         title: form.title,
