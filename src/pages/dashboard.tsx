@@ -57,8 +57,7 @@ export default function Dashboard() {
         setAiPrompt('')
         router.push(`/forms/${data.id}`)
       }
-    } catch { alert('Error generando formulario') }
-    setGenerating(false)
+    } catch (e: any) { alert('Error: ' + e.message) }
   }
 
   const total = forms.reduce((a, f) => a + (f.responses_count || 0), 0)

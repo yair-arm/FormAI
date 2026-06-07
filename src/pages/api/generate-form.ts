@@ -8,5 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const form = await generateFormWithAI(prompt)
     res.status(200).json(form)
-  } catch { res.status(500).json({ error: 'Error generando formulario' }) }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Error desconocido' })
+  }
 }
