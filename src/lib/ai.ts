@@ -1,29 +1,25 @@
 export async function generateFormWithAI(prompt: string) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GOOGLE_AI_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Crea un formulario para: "${prompt}". 
-Responde ÚNICAMENTE con este JSON, sin texto adicional, sin markdown:
-{"title":"Nombre del formulario","description":"Descripción","fields":[{"id":"f1","type":"text","label":"Nombre","placeholder":"Tu nombre","required":true},{"id":"f2","type":"email","label":"Email","placeholder":"tu@email.com","required":true}]}`
-          }]
-        }]
-      })
-    }
-  )
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [{
+        role: 'user',
+        content: `Crea un formulario para: "${prompt}". Responde SOLO con JSON válido sin markdown:
+{"title":"Título","description":"Descripción","fields":[{"id":"f1","type":"text","label":"Nombre","placeholder":"Tu nombre","required":true},{"id":"f2","type":"email","label":"Email","placeholder":"tu@email.com","required":true}]}`
+      }],
+      temperature: 0.3
+    })
+  })
   const data = await res.json()
-  
-  if (data.error) throw new Error('Gemini error: ' + data.error.message)
-  
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  if (data.error) throw new Error('Groq error: ' + data.error.message)
+  const text = data.choices?.[0]?.message?.content || ''
   const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
-  
   const match = clean.match(/\{[\s\S]*\}/)
-  if (!match) throw new Error('Respuesta de IA: ' + clean.slice(0, 200))
-  
+  if (!match) throw new Error('Respuesta inválida: ' + clean.slice(0, 200))
   return JSON.parse(match[0])
 }
