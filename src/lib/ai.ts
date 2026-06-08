@@ -7,28 +7,23 @@ export async function generateFormWithAI(prompt: string) {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `Eres experto en diseño de formularios. El usuario quiere: "${prompt}"
-Responde SOLO con JSON válido (sin markdown ni backticks ni explicaciones):
-{"title":"Título","description":"Descripción","fields":[{"id":"field_1","type":"text","label":"Nombre","placeholder":"Tu nombre","required":true}]}
-Tipos válidos: text, email, number, select, textarea, radio, checkbox.
-Para select/radio/checkbox agrega "options":["op1","op2"].
-Crea entre 3 y 7 campos relevantes.`
+            text: `Crea un formulario para: "${prompt}". 
+Responde ÚNICAMENTE con este JSON, sin texto adicional, sin markdown:
+{"title":"Nombre del formulario","description":"Descripción","fields":[{"id":"f1","type":"text","label":"Nombre","placeholder":"Tu nombre","required":true},{"id":"f2","type":"email","label":"Email","placeholder":"tu@email.com","required":true}]}`
           }]
-        }],
-        generationConfig: { 
-          temperature: 0.3,
-          responseMimeType: "application/json"
-        }
+        }]
       })
     }
   )
   const data = await res.json()
+  
+  if (data.error) throw new Error('Gemini error: ' + data.error.message)
+  
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  const clean = text.replace(/```json|```/g, '').trim()
-  try { return JSON.parse(clean) }
-  catch { 
-    const m = clean.match(/\{[\s\S]+\}/)
-    if (m) return JSON.parse(m[0])
-    throw new Error('Gemini no devolvió JSON válido: ' + clean.slice(0, 100))
-  }
+  const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
+  
+  const match = clean.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error('Respuesta de IA: ' + clean.slice(0, 200))
+  
+  return JSON.parse(match[0])
 }
