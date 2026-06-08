@@ -33,32 +33,35 @@ export default function Dashboard() {
   }
 
   const handleGenerateForm = async () => {
-    if (!aiPrompt.trim()) return
-    setGenerating(true)
-    try {
-      const res = await fetch('/api/generate-form', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt })
-      })
-      const form = await res.json()
-      const slug = (form.title || 'formulario').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-      const { data } = await supabase.from('forms').insert({
-        user_id: user.id,
-        title: form.title,
-        description: form.description,
-        fields: form.fields,
-        slug: `${slug}-${Date.now()}`,
-        is_active: true
-      }).select().single()
-      if (data) {
-        setForms(prev => [data, ...prev])
-        setShowNewForm(false)
-        setAiPrompt('')
-        router.push(`/forms/${data.id}`)
-      }
-    } catch (e: any) { alert('Error: ' + e.message) }
+  if (!aiPrompt.trim()) return
+  setGenerating(true)
+  try {
+    const res = await fetch('/api/generate-form', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: aiPrompt })
+    })
+    const form = await res.json()
+    if (!form.title) throw new Error('La IA no devolvió un formulario válido')
+    const slug = form.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now()
+    const { data, error } = await supabase.from('forms').insert({
+      user_id: user.id,
+      title: form.title,
+      description: form.description || '',
+      fields: form.fields || [],
+      slug,
+      is_active: true
+    }).select().single()
+    if (error) throw new Error(error.message)
+    setForms(prev => [data, ...prev])
+    setShowNewForm(false)
+    setAiPrompt('')
+    router.push(`/forms/${data.id}`)
+  } catch (e: any) {
+    alert('Error: ' + e.message)
   }
+  setGenerating(false)
+}
 
   const total = forms.reduce((a, f) => a + (f.responses_count || 0), 0)
   const active = forms.filter(f => f.is_active).length
