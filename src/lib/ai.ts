@@ -6,7 +6,7 @@ export async function generateFormWithAI(prompt: string) {
       'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
     },
     body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       messages: [{
         role: 'user',
         content: `Crea un formulario exactamente como lo pide el usuario. Si pide una prueba, crea preguntas de prueba. Si pide una encuesta, crea preguntas de encuesta. El formulario debe ser específico para: "${prompt}". Usa tipos radio o checkbox para preguntas de opción múltiple. Responde SOLO con JSON válido sin markdown:
