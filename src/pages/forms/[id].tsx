@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { supabase } from '../../lib/supabase'
 import type { FormField } from '../../lib/supabase'
 
 const FIELD_TYPES = [
@@ -20,13 +21,24 @@ export default function FormBuilder() {
   const router = useRouter()
   const { id } = router.query
   const [title, setTitle] = useState('Mi formulario')
-  const [fields, setFields] = useState<FormField[]>([
-    {id:uid(),type:'text',label:'Nombre completo',placeholder:'Tu nombre',required:true},
-    {id:uid(),type:'email',label:'Email',placeholder:'tu@email.com',required:true},
-  ])
+  const [slug, setSlug] = useState('')
+  const [fields, setFields] = useState<FormField[]>([])
   const [selected, setSelected] = useState<string|null>(null)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!id) return
+    supabase.from('forms').select('*').eq('id', id).single().then(({ data }) => {
+      if (data) {
+        setTitle(data.title || 'Mi formulario')
+        setSlug(data.slug || '')
+        setFields(data.fields || [])
+      }
+      setLoading(false)
+    })
+  }, [id])
 
   const addField = (type: string) => {
     const f: FormField = {id:uid(),type:type as any,label:FIELD_TYPES.find(ft=>ft.type===type)?.label||'Campo',placeholder:'',required:false,options:['select','radio','checkbox'].includes(type)?['Opción 1','Opción 2']:undefined}
@@ -34,10 +46,28 @@ export default function FormBuilder() {
   }
   const updateField = (id:string, u:Partial<FormField>) => setFields(fields.map(f=>f.id===id?{...f,...u}:f))
   const removeField = (id:string) => { setFields(fields.filter(f=>f.id!==id)); if(selected===id) setSelected(null) }
-  const copyLink = () => { navigator.clipboard.writeText(`${window.location.origin}/f/${id||'demo'}`); setCopied(true); setTimeout(()=>setCopied(false),2000) }
-  const handleSave = async () => { setSaving(true); await new Promise(r=>setTimeout(r,800)); setSaving(false); router.push('/dashboard') }
+  
+  const copyLink = () => { 
+    navigator.clipboard.writeText(`${window.location.origin}/f/${slug}`)
+    setCopied(true); setTimeout(()=>setCopied(false),2000) 
+  }
+  
+  const handleSave = async () => { 
+    setSaving(true)
+    await supabase.from('forms').update({ title, fields }).eq('id', id)
+    setSaving(false)
+    router.push('/dashboard') 
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('¿Eliminar este formulario?')) return
+    await supabase.from('forms').delete().eq('id', id)
+    router.push('/dashboard')
+  }
 
   const sel = fields.find(f=>f.id===selected)
+
+  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#666'}}>Cargando...</div>
 
   return (
     <>
@@ -48,6 +78,7 @@ export default function FormBuilder() {
           <input value={title} onChange={e=>setTitle(e.target.value)} style={{background:'none',border:'none',color:'var(--white)',fontFamily:'var(--serif)',fontSize:18,fontWeight:700,outline:'none',minWidth:200}} />
         </div>
         <div style={{display:'flex',gap:10}}>
+          <button onClick={handleDelete} style={{padding:'9px 18px',fontSize:13,background:'none',border:'1px solid #3a1a1a',borderRadius:100,color:'#ff4d6d',cursor:'pointer'}}>🗑 Eliminar</button>
           <button onClick={copyLink} className="btn-ghost" style={{padding:'9px 18px',fontSize:13}}>{copied?'✓ Copiado!':'⇄ Copiar link'}</button>
           <button onClick={handleSave} className="btn-accent" style={{padding:'9px 20px',fontSize:13}}>{saving?'Guardando...':'✓ Guardar'}</button>
         </div>
@@ -67,6 +98,11 @@ export default function FormBuilder() {
         <div style={{overflowY:'auto',padding:32,background:'var(--black)'}}>
           <div style={{maxWidth:580,margin:'0 auto'}}>
             <input value={title} onChange={e=>setTitle(e.target.value)} style={{fontFamily:'var(--serif)',fontSize:28,fontWeight:800,background:'none',border:'none',color:'var(--white)',outline:'none',width:'100%',marginBottom:32}} placeholder="Título del formulario" />
+            {fields.length === 0 && (
+              <div style={{textAlign:'center',padding:'40px',color:'#666',border:'1px dashed #2a2a2a',borderRadius:12}}>
+                No hay campos. Agrega uno desde la izquierda o crea uno nuevo con IA.
+              </div>
+            )}
             {fields.map(field=>(
               <div key={field.id} className={`builder-field ${selected===field.id?'selected':''}`} onClick={()=>setSelected(field.id)}>
                 <span style={{color:'#666',fontSize:18}}>⠿</span>
