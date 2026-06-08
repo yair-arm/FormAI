@@ -9,7 +9,7 @@ export async function generateFormWithAI(prompt: string) {
       model: 'llama-3.1-8b-instant',
       messages: [{
         role: 'user',
-        content: `Crea un formulario para: "${prompt}". Responde SOLO con JSON válido sin markdown:
+        content: `Crea un formulario exactamente como lo pide el usuario. Si pide una prueba, crea preguntas de prueba. Si pide una encuesta, crea preguntas de encuesta. El formulario debe ser específico para: "${prompt}". Usa tipos radio o checkbox para preguntas de opción múltiple. Responde SOLO con JSON válido sin markdown:
 {"title":"Título","description":"Descripción","fields":[{"id":"f1","type":"text","label":"Nombre","placeholder":"Tu nombre","required":true},{"id":"f2","type":"email","label":"Email","placeholder":"tu@email.com","required":true}]}`
       }],
       temperature: 0.3
